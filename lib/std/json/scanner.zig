@@ -421,6 +421,8 @@ pub const Scanner = struct {
     is_end_of_input: bool = false,
     diagnostics: ?*Diagnostics = null,
 
+    allow_trailing_comma: bool = false,
+
     /// The allocator is only used to track `[]` and `{}` nesting levels.
     pub fn initStreaming(allocator: Allocator) @This() {
         return .{
@@ -1468,15 +1470,22 @@ pub const Scanner = struct {
                         '}' => return .object_end,
                         ']' => return .array_end,
                         ',' => {
-                            switch (self.stack.peek()) {
+                            const peek = self.stack.peek();
+                            self.cursor += 1;
+                            switch (peek) {
                                 OBJECT_MODE => {
+                                    if (self.allow_trailing_comma and try self.skipWhitespaceExpectByte() == '}') {
+                                        return .object_end;
+                                    }
                                     self.state = .object_post_comma;
                                 },
                                 ARRAY_MODE => {
+                                    if (self.allow_trailing_comma and try self.skipWhitespaceExpectByte() == ']') {
+                                        return .array_end;
+                                    }
                                     self.state = .value;
                                 },
                             }
-                            self.cursor += 1;
                             continue :state_loop;
                         },
                         else => return error.SyntaxError,

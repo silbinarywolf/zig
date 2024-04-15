@@ -42,6 +42,10 @@ pub const ParseOptions = struct {
     /// The default with a `*std.json.Reader` input is `.alloc_always`.
     /// Ignored for `parseFromValue` and `parseFromValueLeaky`.
     allocate: ?AllocWhen = null,
+
+    /// If false, then the underlying Scanner will return `error.SyntaxError` if it hits a trailing comma on an object or array.
+    /// This is only used for `parseFromSlice` or `parseFromTokenSource` with a `*std.json.Scanner` input.
+    allow_trailing_comma: bool = false,
 };
 
 pub fn Parsed(comptime T: type) type {
@@ -120,6 +124,7 @@ pub fn parseFromTokenSourceLeaky(
 ) ParseError(@TypeOf(scanner_or_reader.*))!T {
     if (@TypeOf(scanner_or_reader.*) == Scanner) {
         assert(scanner_or_reader.is_end_of_input);
+        scanner_or_reader.allow_trailing_comma = options.allow_trailing_comma;
     }
     var resolved_options = options;
     if (resolved_options.max_value_len == null) {
